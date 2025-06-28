@@ -1,140 +1,178 @@
 #!/bin/bash
 
-# ========= 顏色定義 =========
+# ============================================
+# VPS Toolbox 工具箱 - By Lucas (behwilly)
+# ============================================
+
+# 顏色定義
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 BLUE='\033[1;34m'
 NC='\033[0m' # 無色
 
-# ========= 預設值定義 =========
-SCRIPT_VERSION="1.1.0"
-DEFAULT_LANG="zh"
-INSTALL_URL="http://bt950.hostcli.com/install/install_panel.sh"
-INSTALL_DOMAIN="www.HostCLi.com"
-ENABLE_LOG="true"
-LOG_FILE_PATH="/var/log/vps-toolbox.log"
-RETURN_TO_MENU="true"
-CLEAR_SCREEN="true"
-BT_PANEL_PORT="8888"
-BT_PANEL_PATH="/www/server/panel"
+# GitHub 原始腳本 URL（供自動更新）
+GITHUB_RAW_URL="https://raw.githubusercontent.com/behwilly/vps-toolbox/main/toolbox.sh"
+LOCAL_SCRIPT="$0"
 
-# ========= 讀取 .env =========
-if [ -f .env ]; then
-  export $(grep -v '^#' .env | xargs)
-else
-  echo -e "${RED}⚠️ 未偵測到 .env 檔案，將使用預設值。${NC}"
+# ------------------ 自動更新區段 ------------------
+if [[ "$LOCAL_SCRIPT" == "./toolbox.sh" || "$LOCAL_SCRIPT" == "toolbox.sh" ]]; then
+  echo -e "${BLUE}🔄 正在檢查腳本更新...${NC}"
+  curl -s -o toolbox_latest.sh "$GITHUB_RAW_URL"
+  if ! cmp -s toolbox.sh toolbox_latest.sh; then
+    mv toolbox_latest.sh toolbox.sh
+    chmod +x toolbox.sh
+    echo -e "${GREEN}✅ 已自動更新為最新版腳本，請重新執行。${NC}"
+    exit 0
+  else
+    rm -f toolbox_latest.sh
+    echo -e "${GREEN}🔍 已是最新版，繼續執行...${NC}"
+  fi
 fi
 
-# ========= 自我提權 =========
+# ------------------ 自我提權 ------------------
 if [ "$EUID" -ne 0 ]; then
   echo -e "${GREEN}正在嘗試使用 sudo 重新執行腳本...${NC}"
   sudo bash "$0" "$@"
   exit $?
 fi
 
-# ========= 螢幕清除 =========
-[ "$CLEAR_SCREEN" = "true" ] && clear
-
-# ========= 分隔線函數 =========
+# 分隔線函數
 separator() {
   echo -e "${BLUE}----------------------------------------${NC}"
 }
 
-# ========= log 函數 =========
-log_action() {
-  if [ "$ENABLE_LOG" = "true" ]; then
-    echo "$(date '+%F %T') [$1] $2" >> "$LOG_FILE_PATH"
+# ------------------ 系統功能 ------------------
+
+# 功能 1：更改 root 密碼
+change_root_password() {
+  separator
+  echo -e "${GREEN}⚙️ 更改 root 密碼${NC}"
+  read -s -p "請輸入新密碼: " password
+  echo ""
+  read -s -p "再次輸入確認密碼: " confirm
+  echo ""
+  if [[ "$password" != "$confirm" || -z "$password" ]]; then
+    echo -e "${RED}❌ 密碼不一致或為空，操作已取消。${NC}"
+    return
   fi
+  echo "root:$password" | chpasswd
+  if [[ $? -eq 0 ]]; then
+    echo -e "${GREEN}✅ root 密碼已成功更改。${NC}"
+  else
+    echo -e "${RED}❌ 密碼更改失敗。請確認您有 root 權限。${NC}"
+  fi
+  read -p "按 Enter 返回主選單..." dummy
 }
 
-# ========= 顯示標題 + 版本 =========
-separator
-echo -e "${GREEN}VPS 工具箱 - 版本 $SCRIPT_VERSION${NC}"
-separator
-echo ""
+# 功能 2：APT 更新系統
+apt_update_upgrade() {
+  separator
+  echo -e "${GREEN}📦 正在更新 APT 套件清單與系統升級...${NC}"
+  apt update && apt upgrade -y
+  if [[ $? -eq 0 ]]; then
+    echo -e "${GREEN}✅ 系統已更新完成。${NC}"
+  else
+    echo -e "${RED}❌ 更新過程中發生錯誤。${NC}"
+  fi
+  read -p "按 Enter 返回主選單..." dummy
+}
 
-# ========= 功能函數 =========
+# ------------------ 寶塔功能 ------------------
+
+# 功能 3：安裝寶塔純淨版
 install_bt_pure() {
   separator
-  echo -e "${BLUE}[功能] 你選擇了：安裝寶塔純淨版 9.5.0${NC}"
-  log_action "install_bt_pure" "安裝寶塔面板"
-  echo -e "${GREEN}正在安裝中... 來源：$INSTALL_URL${NC}"
+  echo -e "${GREEN}正在安裝寶塔面板 9.5.0 純淨版...${NC}"
+  echo -e "${BLUE}來源: http://bt950.hostcli.com${NC}"
   separator
   if [ -f /usr/bin/curl ]; then
-    curl -sSO "$INSTALL_URL"
+    curl -sSO http://bt950.hostcli.com/install/install_panel.sh
   else
-    wget -O install_panel.sh "$INSTALL_URL"
+    wget -O install_panel.sh http://bt950.hostcli.com/install/install_panel.sh
   fi
-  bash install_panel.sh "$INSTALL_DOMAIN"
+  bash install_panel.sh www.HostCLi.com
   separator
-  echo -e "${GREEN}✅ 安裝完成。${NC}"
-  [ "$RETURN_TO_MENU" = "true" ] && read -p "按 Enter 返回主選單..." dummy
+  echo -e "${GREEN}✅ 安裝流程已完成，請確認是否成功。${NC}"
+  read -p "按 Enter 返回主選單..." dummy
 }
 
+# 功能 4：查看登入資訊
 show_bt_login() {
   separator
-  echo -e "${BLUE}[功能] 你選擇了：查看登入資訊${NC}"
-  log_action "show_bt_login" "查看登入資訊"
+  echo -e "${GREEN}正在讀取寶塔面板登入資訊...${NC}"
   bt default
   separator
+  echo ""
 }
 
+# 功能 5：查看面板狀態
 check_bt_status() {
   separator
-  echo -e "${BLUE}[功能] 你選擇了：查看面板運行狀態${NC}"
-  log_action "check_bt_status" "查看狀態"
+  echo -e "${GREEN}寶塔面板運行狀態：${NC}"
   bt status
   separator
+  echo ""
 }
 
+# 功能 6：停止寶塔面板
 stop_bt_panel() {
   separator
-  echo -e "${BLUE}[功能] 你選擇了：停止寶塔面板${NC}"
-  log_action "stop_bt_panel" "停止面板"
+  echo -e "${RED}⚠️ 正在停止寶塔面板...${NC}"
   bt stop
   separator
+  echo ""
 }
 
+# 功能 7：啟動寶塔面板
 start_bt_panel() {
   separator
-  echo -e "${BLUE}[功能] 你選擇了：啟動寶塔面板${NC}"
-  log_action "start_bt_panel" "啟動面板"
+  echo -e "${GREEN}正在啟動寶塔面板...${NC}"
   bt start
   separator
+  echo ""
 }
 
+# 功能 8：重啓所有服務
 reload_bt_services() {
   separator
-  echo -e "${BLUE}[功能] 你選擇了：重啓所有服務${NC}"
-  log_action "reload_bt_services" "重啓服務"
+  echo -e "${GREEN}正在重啓所有服務（Web/FTP/DB）...${NC}"
   bt reload
   separator
+  echo -e "${GREEN}✅ 所有服務已重新載入。${NC}"
+  echo ""
 }
 
+# 功能 9：重啓寶塔面板
 restart_bt() {
   separator
-  echo -e "${BLUE}[功能] 你選擇了：重啓寶塔面板${NC}"
-  log_action "restart_bt" "重啓面板"
+  echo -e "${GREEN}正在重啓寶塔面板...${NC}"
   bt restart
   separator
+  echo -e "${GREEN}✅ 寶塔已重啓完成。${NC}"
+  echo ""
 }
 
-# ========= 主選單 =========
+# ------------------ 主選單 ------------------
+
 show_menu() {
   while true; do
     separator
     echo -e "${GREEN}VPS 工具箱 - 請選擇要執行的功能：${NC}"
     separator
+    echo -e "${BLUE}🖥️ 系統功能${NC}"
+    echo "  1) 更改 root 密碼"
+    echo "  2) APT 更新系統（apt update & upgrade）"
     echo ""
-    echo "1) 安裝寶塔純淨版 9.5.0"
-    echo "2) 查看登入資訊"
-    echo "3) 查看面板運行狀態"
-    echo "4) 停止寶塔面板"
-    echo "5) 啟動寶塔面板"
-    echo "6) 重啓所有服務"
-    echo "7) 重啓寶塔面板"
+    echo -e "${BLUE}🧩 寶塔功能${NC}"
+    echo "  3) 安裝寶塔純淨版 9.5.0"
+    echo "  4) 查看登入資訊"
+    echo "  5) 查看面板運行狀態"
+    echo "  6) 停止寶塔面板"
+    echo "  7) 啟動寶塔面板"
+    echo "  8) 重啓所有服務"
+    echo "  9) 重啓寶塔面板"
     echo ""
-    echo "0) 離開腳本"
+    echo "  0) 離開腳本"
     echo ""
     separator
     printf "請輸入數字選項: "
@@ -142,25 +180,21 @@ show_menu() {
     separator
 
     case "$choice" in
-      1) install_bt_pure ;;
-      2) show_bt_login ;;
-      3) check_bt_status ;;
-      4) stop_bt_panel ;;
-      5) start_bt_panel ;;
-      6) reload_bt_services ;;
-      7) restart_bt ;;
-      0)
-        echo -e "${GREEN}已離開腳本，再見 👋${NC}"
-        echo ""
-        exit 0
-        ;;
-      *)
-        echo -e "${RED}無效的選項，請輸入 0~7。${NC}"
-        ;;
+      1) change_root_password ;;
+      2) apt_update_upgrade ;;
+      3) install_bt_pure ;;
+      4) show_bt_login ;;
+      5) check_bt_status ;;
+      6) stop_bt_panel ;;
+      7) start_bt_panel ;;
+      8) reload_bt_services ;;
+      9) restart_bt ;;
+      0) echo -e "${GREEN}已離開腳本，再見 👋${NC}"; exit 0 ;;
+      *) echo -e "${RED}❌ 無效的選項，請輸入正確數字。${NC}" ;;
     esac
     echo ""
   done
 }
 
-# ========= 開始主選單 =========
+# 執行主選單
 show_menu
