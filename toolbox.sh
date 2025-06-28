@@ -17,11 +17,16 @@ restart_bt() {
 
 # 功能清單選單
 show_menu() {
-  echo -e "${GREEN}VPS 工具箱 - 請選擇要執行的功能：${NC}" > /dev/tty
-  echo "1) 重啓寶塔面板" > /dev/tty
-  echo "0) 離開" > /dev/tty
-  echo "" > /dev/tty
-  read -p "請輸入數字選項: " choice < /dev/tty
+  {
+    echo -e "${GREEN}VPS 工具箱 - 請選擇要執行的功能：${NC}"
+    echo "1) 重啓寶塔面板"
+    echo "0) 離開"
+    echo ""
+    printf "請輸入數字選項: "
+  } > /dev/tty
+
+  # 用 /dev/tty 讀輸入，避免 curl/bash 無法讀 stdin
+  read choice < /dev/tty
 
   case "$choice" in
     1)
