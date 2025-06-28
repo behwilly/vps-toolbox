@@ -1,22 +1,40 @@
-# VPS Toolbox 工具箱
+<p align="center">
+  <img src="https://raw.githubusercontent.com/behwilly/vps-toolbox/main/assets/logo.png" width="180" alt="VPS Toolbox Logo" />
+</p>
 
-一個簡潔實用的 VPS 工具箱腳本，提供常用的寶塔面板管理功能。  
-支援 `.env` 自訂設定、自動 sudo 權限、多語言架構、Log 紀錄等特性，適合用於 Linux VPS 快速維運。
+<h1 align="center">🌐 VPS Toolbox 工具箱</h1>
+<p align="center">一個簡潔實用的 VPS 腳本工具，快速管理寶塔面板，適用於 Linux VPS。</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/script-shell-blue?logo=gnu-bash" />
+  <img src="https://img.shields.io/badge/version-1.1.0-green" />
+  <img src="https://img.shields.io/badge/license-MIT-lightgrey" />
+</p>
+
+---
+
+## 🖼️ 預覽畫面
+
+> 一目了然的功能選單：
+
+![screenshot](https://raw.githubusercontent.com/behwilly/vps-toolbox/main/assets/screenshot-menu.png)
 
 ---
 
 ## 🧰 功能列表
 
-| 選項 | 功能名稱             | 描述                                      |
-|------|----------------------|-------------------------------------------|
-| 1    | 安裝寶塔純淨版       | 安裝寶塔 9.5.0 純淨版（無綁定、無廣告）  |
-| 2    | 查看登入資訊         | 顯示面板預設帳號、密碼與登入網址         |
-| 3    | 查看面板運行狀態     | 顯示寶塔是否正常運作                      |
-| 4    | 停止寶塔面板         | 停止 BT 面板（會中斷登入）                |
-| 5    | 啟動寶塔面板         | 手動啟動面板                              |
-| 6    | 重啓所有服務         | 重新啟動所有服務（Web / FTP / DB）       |
-| 7    | 重啓寶塔面板         | 快速重啓面板主程式                        |
-| 0    | 離開腳本             | 結束並離開腳本                            |
+| 選項 | 功能名稱             | 描述                                        |
+|------|----------------------|---------------------------------------------|
+| 1    | 安裝寶塔純淨版       | 安裝寶塔 9.5.0 純淨版（無綁定、無廣告）    |
+| 2    | 查看登入資訊         | 顯示面板預設帳號、密碼與登入網址           |
+| 3    | 查看面板運行狀態     | 顯示寶塔是否正常運作                        |
+| 4    | 停止寶塔面板         | 停止 BT 面板（會中斷登入）                  |
+| 5    | 啟動寶塔面板         | 手動啟動面板                                |
+| 6    | 重啓所有服務         | 重新啟動所有服務（Web / FTP / DB）         |
+| 7    | 重啓寶塔面板         | 快速重啓面板主程式                          |
+| 0    | 離開腳本             | 結束並離開腳本                              |
+
+---
 
 <br>
 
