@@ -77,7 +77,3 @@ chmod +x toolbox.sh
 Lucas
 <br>
 GitHub: behwilly
-<br>
-Instagram: @amifloralsupplies
-
----
