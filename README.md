@@ -22,6 +22,6 @@
 ## 📦 安裝方式
 
 ```bash
-curl -o toolbox.sh https://raw.githubusercontent.com/<你的帳號>/<repo名>/main/toolbox.sh](https://raw.githubusercontent.com/behwilly/vps-toolbox/refs/heads/main/toolbox.sh
+curl -o toolbox.sh https://raw.githubusercontent.com/behwilly/vps-toolbox/main/toolbox.sh
 chmod +x toolbox.sh
 ./toolbox.sh
