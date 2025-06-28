@@ -1,2 +1,27 @@
-# vps-toolbox
-🛠️ A collection of lightweight shell scripts for managing and automating VPS tasks
+# VPS Toolbox 工具箱
+
+一個簡潔實用的 VPS 工具箱腳本，提供常用的寶塔面板管理功能。支援 `.env` 自訂設定、多語言、Log 紀錄等特性，適合用於 Linux VPS 管理。
+
+---
+
+## 🧰 功能列表
+
+| 選項 | 功能名稱             | 描述                                      |
+|------|----------------------|-------------------------------------------|
+| 1    | 安裝寶塔純淨版       | 安裝寶塔 9.5.0 純淨版（無綁定、無垃圾）  |
+| 2    | 查看登入資訊         | 顯示面板預設帳號、密碼與網址             |
+| 3    | 查看面板運行狀態     | 查看寶塔面板是否正常運作                  |
+| 4    | 停止寶塔面板         | 停止 BT 面板（會中斷連線）                |
+| 5    | 啟動寶塔面板         | 啟動面板                                  |
+| 6    | 重啓所有服務         | 重新啟動所有面板服務（Web / FTP / DB）   |
+| 7    | 重啓寶塔面板         | 快速重新啟動 BT 面板本身                  |
+| 0    | 離開腳本             | 結束腳本                                  |
+
+---
+
+## 📦 安裝方式
+
+```bash
+curl -o toolbox.sh https://raw.githubusercontent.com/<你的帳號>/<repo名>/main/toolbox.sh
+chmod +x toolbox.sh
+./toolbox.sh
