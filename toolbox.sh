@@ -24,7 +24,7 @@ echo -e "${GREEN}                    VPS Toolbox v1.1.0${NC}"
 
 # ------------------ 自我提權 ------------------
 if [ "$EUID" -ne 0 ]; then
-  echo -e "${GREEN}正在嘗試使用 sudo 重新執行腳本...${NC}"
+  echo -e "${GREEN}\u6b63\u5728\u5617\u8a66\u4f7f\u7528 sudo \u91cd\u65b0\u57f7\u884c\u8173\u672c...${NC}"
   exec sudo -E env SKIP_UPDATE_CHECK=1 bash "$0" "$@"
 fi
 
@@ -85,7 +85,7 @@ change_root_password() {
 
 apt_update_upgrade() {
   separator
-  echo -e "${BLUE}🔧 更新 APT 套件索引${NC}"
+  echo -e "${BLUE}🔧 更新 APT 套件組合索引${NC}"
   apt update
 
   if [ $(apt list --upgradable 2>/dev/null | wc -l) -gt 1 ]; then
@@ -120,6 +120,34 @@ slim_down_system() {
   rm -rf /var/tmp/*
 
   echo -e "${GREEN}✅ 系統瘦身完成！空間已釋放。${NC}"
+  read -p "按 Enter 返回主選單..." dummy
+}
+
+check_disk_usage() {
+  separator
+  echo -e "${GREEN}📍 磁碟容量概覽。${NC}\n"
+  df -hT -x tmpfs -x devtmpfs | awk 'NR==1 || $0 !~ /tmpfs|devtmpfs/ {print $1, $2, $3, $4, $5, $7}' | column -t
+  separator
+  read -p "按 Enter 返回主選單..." dummy
+}
+
+setup_ssh_key_login() {
+  separator
+  echo -e "${GREEN}🔐 配置 SSH 公鑰登入 (免密登入)${NC}"
+  read -p "請輸入您的公鑰內容: " ssh_key
+
+  if [[ -z "$ssh_key" || ! "$ssh_key" =~ ^ssh- ]]; then
+    echo -e "${RED}❌ 無效的 SSH 公鑰格式，操作取消。${NC}"
+    return
+  fi
+
+  mkdir -p ~/.ssh
+  chmod 700 ~/.ssh
+  echo "$ssh_key" >> ~/.ssh/authorized_keys
+  chmod 600 ~/.ssh/authorized_keys
+
+  echo -e "${GREEN}✅ SSH 公鑰已成功加入，您現在可以免密登入此 VPS。${NC}"
+  separator
   read -p "按 Enter 返回主選單..." dummy
 }
 
@@ -193,16 +221,18 @@ show_menu() {
     echo -e "${BLUE}💻 系統功能${NC}"
     echo "  1) 更改 root 密碼"
     echo "  2) APT 更新系統"
-    echo " 10) 一鍵瘦身系統"
+    echo "  3) 一鍵瘦身系統"
+    echo "  4) 查看磁碟容量"
+    echo "  5) 配置 SSH 公鑰登入 (免密登入)"
     echo ""
     echo -e "${BLUE}🧹 寶塔功能${NC}"
-    echo "  3) 安裝寶塔純淨版"
-    echo "  4) 查看登入資訊"
-    echo "  5) 查看運行狀態"
-    echo "  6) 停止寶塔"
-    echo "  7) 啟動寶塔"
-    echo "  8) 重啟所有服務"
-    echo "  9) 重啟寶塔"
+    echo "  6) 安裝寶塔純淨版"
+    echo "  7) 查看登入資訊"
+    echo "  8) 查看運行狀態"
+    echo "  9) 停止寶塔"
+    echo " 10) 啟動寶塔"
+    echo " 11) 重啟所有服務"
+    echo " 12) 重啟寶塔"
     echo ""
     echo "  0) 離開腳本"
     echo ""
@@ -214,19 +244,4 @@ show_menu() {
     case "$choice" in
       1) change_root_password ;;
       2) apt_update_upgrade ;;
-      10) slim_down_system ;;
-      3) install_bt_pure ;;
-      4) show_bt_login ;;
-      5) check_bt_status ;;
-      6) stop_bt_panel ;;
-      7) start_bt_panel ;;
-      8) reload_bt_services ;;
-      9) restart_bt ;;
-      0) echo -e "${GREEN}✅ 已離開腳本，再見 👋${NC}"; exit 0 ;;
-      *) echo -e "${RED}❌ 無效選項。請輸入有效數字。${NC}" ;;
-    esac
-    echo ""
-  done
-}
-
-show_menu
+     
