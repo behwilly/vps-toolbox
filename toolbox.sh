@@ -4,46 +4,65 @@
 # VPS Toolbox 工具箱 - By Lucas (behwilly)
 # ============================================
 
-# 顏色定義
+# ------------------ 顏色定義 ------------------
 GREEN='\033[0;32m'
 RED='\033[0;31m'
+YELLOW='\033[1;33m'
 BLUE='\033[1;34m'
-NC='\033[0m' # 無色
+NC='\033[0m'
 
-# GitHub 原始腳本 URL（供自動更新）
-GITHUB_RAW_URL="https://raw.githubusercontent.com/behwilly/vps-toolbox/main/toolbox.sh"
-LOCAL_SCRIPT="$0"
-
-# ------------------ 自動更新區段 ------------------
-if [[ "$LOCAL_SCRIPT" == "./toolbox.sh" || "$LOCAL_SCRIPT" == "toolbox.sh" ]]; then
-  echo -e "${BLUE}🔄 正在檢查腳本更新...${NC}"
-  curl -s -o toolbox_latest.sh "$GITHUB_RAW_URL"
-  if ! cmp -s toolbox.sh toolbox_latest.sh; then
-    mv toolbox_latest.sh toolbox.sh
-    chmod +x toolbox.sh
-    echo -e "${GREEN}✅ 已自動更新為最新版腳本，請重新執行。${NC}"
-    exit 0
-  else
-    rm -f toolbox_latest.sh
-    echo -e "${GREEN}🔍 已是最新版，繼續執行...${NC}"
-  fi
-fi
+# ------------------ Banner + 版本 ------------------
+clear
+echo -e "${BLUE}"
+cat << "EOF"
+ _   _  ___   __   _____ __   __  _   __  ____   __  
+| \ / || _,\/' _/ |_   _/__\ /__\| | |  \/__\ \_/ / 
+`\ V /'| v_/`._`.   | || \/ | \/ | |_| -< \/ > , <  
+  \_/  |_|  |___/   |_| \__/ \__/|___|__/\__/_/ \_\ 
+EOF
+echo -e "${GREEN}                    VPS Toolbox v1.1.0${NC}"
 
 # ------------------ 自我提權 ------------------
 if [ "$EUID" -ne 0 ]; then
   echo -e "${GREEN}正在嘗試使用 sudo 重新執行腳本...${NC}"
-  sudo bash "$0" "$@"
-  exit $?
+  exec sudo -E env SKIP_UPDATE_CHECK=1 bash "$0" "$@"
 fi
 
-# 分隔線函數
+# ------------------ 自動更新檢查 ------------------
+LOCAL_SCRIPT="$(realpath "${BASH_SOURCE[0]}")"
+GITHUB_RAW_URL="https://raw.githubusercontent.com/behwilly/vps-toolbox/main/toolbox.sh"
+
+if [[ -z "$SKIP_UPDATE_CHECK" && -f "$LOCAL_SCRIPT" ]]; then
+  echo -e "${BLUE}🔄 正在檢查是否有新版腳本...${NC}"
+  curl -s -o /tmp/toolbox_latest.sh "$GITHUB_RAW_URL"
+
+  if ! cmp -s "$LOCAL_SCRIPT" /tmp/toolbox_latest.sh; then
+    echo -e "${RED}📢 偵測到新版腳本可用！${NC}"
+    read -p "是否要立即更新？(y/n): " update_confirm
+    if [[ "$update_confirm" =~ ^[Yy]$ ]]; then
+      mv /tmp/toolbox_latest.sh "$LOCAL_SCRIPT"
+      chmod +x "$LOCAL_SCRIPT"
+      echo -e "${GREEN}✅ 已更新為最新版腳本，請重新執行： ./toolbox.sh${NC}"
+      exit 0
+    else
+      echo -e "${YELLOW}⚠️ 已略過更新，繼續執行目前版本。${NC}"
+    fi
+  else
+    rm -f /tmp/toolbox_latest.sh
+    echo -e "${GREEN}✅ 已是最新版，繼續執行...${NC}"
+  fi
+fi
+
+# 分隔線
 separator() {
   echo -e "${BLUE}----------------------------------------${NC}"
 }
 
-# ------------------ 系統功能 ------------------
+print_header() {
+  echo -e "\n${BLUE}===== $1 =====${NC}\n"
+}
 
-# 功能 1：更改 root 密碼
+# ---------- 系統功能 ----------
 change_root_password() {
   separator
   echo -e "${GREEN}⚙️ 更改 root 密碼${NC}"
@@ -64,25 +83,50 @@ change_root_password() {
   read -p "按 Enter 返回主選單..." dummy
 }
 
-# 功能 2：APT 更新系統
 apt_update_upgrade() {
   separator
-  echo -e "${GREEN}📦 正在更新 APT 套件清單與系統升級...${NC}"
-  apt update && apt upgrade -y
-  if [[ $? -eq 0 ]]; then
-    echo -e "${GREEN}✅ 系統已更新完成。${NC}"
+  echo -e "${BLUE}🔧 更新 APT 套件索引${NC}"
+  apt update
+
+  if [ $(apt list --upgradable 2>/dev/null | wc -l) -gt 1 ]; then
+    echo -e "${BLUE}🔄 升級 APT 套件${NC}"
+    apt upgrade -y --allow-downgrades
+    echo -e "${BLUE}🔧 清理未使用套件${NC}"
+    apt autoremove -y
+    echo -e "${GREEN}✅ 系統已升級並清理完成。${NC}"
   else
-    echo -e "${RED}❌ 更新過程中發生錯誤。${NC}"
+    echo -e "${YELLOW}📆 沒有可升級套件。${NC}"
   fi
   read -p "按 Enter 返回主選單..." dummy
 }
 
-# ------------------ 寶塔功能 ------------------
+slim_down_system() {
+  separator
+  echo -e "${BLUE}🧹 正在為系統進行瘦身與清理...${NC}"
 
-# 功能 3：安裝寶塔純淨版
+  echo -e "${BLUE}- 清除 APT 暫存套件...${NC}"
+  apt clean
+
+  echo -e "${BLUE}- 自動移除不需要的套件...${NC}"
+  apt autoremove -y
+
+  echo -e "${BLUE}- 清理 journald 舊日誌...${NC}"
+  journalctl --vacuum-time=3d
+
+  echo -e "${BLUE}- 清除暫存資料夾 (/tmp)...${NC}"
+  rm -rf /tmp/*
+
+  echo -e "${BLUE}- 清除快取資料夾 (/var/tmp)...${NC}"
+  rm -rf /var/tmp/*
+
+  echo -e "${GREEN}✅ 系統瘦身完成！空間已釋放。${NC}"
+  read -p "按 Enter 返回主選單..." dummy
+}
+
+# ---------- 寶塔功能 ----------
 install_bt_pure() {
   separator
-  echo -e "${GREEN}正在安裝寶塔面板 9.5.0 純淨版...${NC}"
+  echo -e "${GREEN}正在安裝寶塔 9.5.0 純淨版...${NC}"
   echo -e "${BLUE}來源: http://bt950.hostcli.com${NC}"
   separator
   if [ -f /usr/bin/curl ]; then
@@ -92,96 +136,85 @@ install_bt_pure() {
   fi
   bash install_panel.sh www.HostCLi.com
   separator
-  echo -e "${GREEN}✅ 安裝流程已完成，請確認是否成功。${NC}"
+  echo -e "${GREEN}✅ 安裝已完成。${NC}"
   read -p "按 Enter 返回主選單..." dummy
 }
 
-# 功能 4：查看登入資訊
 show_bt_login() {
   separator
-  echo -e "${GREEN}正在讀取寶塔面板登入資訊...${NC}"
+  echo -e "${GREEN}顯示寶塔登入資訊...${NC}"
   bt default
   separator
-  echo ""
 }
 
-# 功能 5：查看面板狀態
 check_bt_status() {
   separator
-  echo -e "${GREEN}寶塔面板運行狀態：${NC}"
+  echo -e "${GREEN}寶塔面板運行狀態:${NC}"
   bt status
   separator
-  echo ""
 }
 
-# 功能 6：停止寶塔面板
 stop_bt_panel() {
   separator
-  echo -e "${RED}⚠️ 正在停止寶塔面板...${NC}"
+  echo -e "${RED}⛔️ 正在停止寶塔...${NC}"
   bt stop
   separator
-  echo ""
 }
 
-# 功能 7：啟動寶塔面板
 start_bt_panel() {
   separator
-  echo -e "${GREEN}正在啟動寶塔面板...${NC}"
+  echo -e "${GREEN}啟動寶塔面板...${NC}"
   bt start
   separator
-  echo ""
 }
 
-# 功能 8：重啓所有服務
 reload_bt_services() {
   separator
-  echo -e "${GREEN}正在重啓所有服務（Web/FTP/DB）...${NC}"
+  echo -e "${GREEN}重啟所有服務 (Web/FTP/DB)...${NC}"
   bt reload
   separator
-  echo -e "${GREEN}✅ 所有服務已重新載入。${NC}"
-  echo ""
+  echo -e "${GREEN}✅ 所有服務已重載完成。${NC}"
 }
 
-# 功能 9：重啓寶塔面板
 restart_bt() {
   separator
-  echo -e "${GREEN}正在重啓寶塔面板...${NC}"
+  echo -e "${GREEN}重啟寶塔...${NC}"
   bt restart
   separator
-  echo -e "${GREEN}✅ 寶塔已重啓完成。${NC}"
-  echo ""
+  echo -e "${GREEN}✅ 寶塔已重啟完成。${NC}"
 }
 
-# ------------------ 主選單 ------------------
-
+# ---------- 主選單 ----------
 show_menu() {
   while true; do
     separator
-    echo -e "${GREEN}VPS 工具箱 - 請選擇要執行的功能：${NC}"
+    echo -e "${GREEN}VPS 工具箱 - 請選擇功能:${NC}"
     separator
-    echo -e "${BLUE}🖥️ 系統功能${NC}"
+    echo -e "${BLUE}💻 系統功能${NC}"
     echo "  1) 更改 root 密碼"
-    echo "  2) APT 更新系統（apt update & upgrade）"
+    echo "  2) APT 更新系統"
+    echo " 10) 一鍵瘦身系統"
     echo ""
-    echo -e "${BLUE}🧩 寶塔功能${NC}"
-    echo "  3) 安裝寶塔純淨版 9.5.0"
+    echo -e "${BLUE}🧹 寶塔功能${NC}"
+    echo "  3) 安裝寶塔純淨版"
     echo "  4) 查看登入資訊"
-    echo "  5) 查看面板運行狀態"
-    echo "  6) 停止寶塔面板"
-    echo "  7) 啟動寶塔面板"
-    echo "  8) 重啓所有服務"
-    echo "  9) 重啓寶塔面板"
+    echo "  5) 查看運行狀態"
+    echo "  6) 停止寶塔"
+    echo "  7) 啟動寶塔"
+    echo "  8) 重啟所有服務"
+    echo "  9) 重啟寶塔"
     echo ""
     echo "  0) 離開腳本"
     echo ""
     separator
-    printf "請輸入數字選項: "
+    printf "請輸入選項: "
     read choice
     separator
 
     case "$choice" in
       1) change_root_password ;;
       2) apt_update_upgrade ;;
+      10) slim_down_system ;;
       3) install_bt_pure ;;
       4) show_bt_login ;;
       5) check_bt_status ;;
@@ -189,12 +222,11 @@ show_menu() {
       7) start_bt_panel ;;
       8) reload_bt_services ;;
       9) restart_bt ;;
-      0) echo -e "${GREEN}已離開腳本，再見 👋${NC}"; exit 0 ;;
-      *) echo -e "${RED}❌ 無效的選項，請輸入正確數字。${NC}" ;;
+      0) echo -e "${GREEN}✅ 已離開腳本，再見 👋${NC}"; exit 0 ;;
+      *) echo -e "${RED}❌ 無效選項。請輸入有效數字。${NC}" ;;
     esac
     echo ""
   done
 }
 
-# 執行主選單
 show_menu
